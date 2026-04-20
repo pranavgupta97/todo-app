@@ -190,7 +190,7 @@ All decisions made 2026-04-19 unless otherwise noted. Each row: what we picked, 
 **Deliverables:** SDKMAN, JDK 21.0.5-tem, Maven 3.9.15, `gh` 2.90 (authenticated as `pranavgupta97`), pnpm 10.33 installed and verified.
 **Exit criteria:** `java -version`, `mvn -version`, `gh auth status`, `pnpm --version` all green. ✅
 
-### Phase 2 — Repository bootstrap 🔄 In progress
+### Phase 2 — Repository bootstrap ✅ Done (2026-04-19)
 **Goal:** GitHub repository created with baseline project scaffolding.
 **Deliverables:**
 - Local directory `/Users/pranavgupta/Code/todo-app/`
@@ -358,4 +358,4 @@ _(Populated in Phase 3 and expanded each phase.)_
 - Clarified monorepo-with-separate-deploys vs monolith-vs-microservice terminology.
 - Confirmed collaboration preferences: user runs all build/test/git commands; Claude writes code, explains, and guides.
 - **Phase 1 (Dev env setup):** installed SDKMAN 5.22, JDK 21.0.5-tem, Maven 3.9.15, gh 2.90 (authenticated), pnpm 10.33. Verified. ✅
-- **Phase 2 (Repo bootstrap):** scaffold files created locally (`.gitignore`, `.editorconfig`, `LICENSE`, `README.md`, this plan doc, `docs/.gitkeep`). Awaiting user to run `git init` + `gh repo create` + `git push` to complete the phase.
+- **Phase 2 (Repo bootstrap):** scaffold files created locally (`.gitignore`, `.editorconfig`, `LICENSE`, `README.md`, this plan doc, `docs/.gitkeep`). Repo created and initial commit pushed to `main` at https://github.com/pranavgupta97/todo-app. ✅

@@ -21,6 +21,7 @@ Desktop.ini
 out/
 
 # VS Code (keep shared settings if committed explicitly)
+.vscode/
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
