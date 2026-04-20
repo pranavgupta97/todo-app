@@ -1,0 +1,69 @@
+# ==========================================================================
+# OS
+# ==========================================================================
+.DS_Store
+.AppleDouble
+.LSOverride
+.Spotlight-V100
+.Trashes
+._*
+Thumbs.db
+Desktop.ini
+
+# ==========================================================================
+# IDEs
+# ==========================================================================
+# JetBrains (IntelliJ, WebStorm, etc.)
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# VS Code (keep shared settings if committed explicitly)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Vim / Emacs
+*.swp
+*.swo
+*~
+.#*
+\#*#
+
+# ==========================================================================
+# Environment / secrets
+# ==========================================================================
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# ==========================================================================
+# Logs & runtime
+# ==========================================================================
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ==========================================================================
+# Coverage / test artifacts
+# ==========================================================================
+coverage/
+.nyc_output/
+*.lcov
+
+# ==========================================================================
+# Build artifacts (root-level catch-all; subprojects add their own too)
+# ==========================================================================
+dist/
+build/
+target/
+node_modules/
