@@ -1,0 +1,49 @@
+spring:
+  application:
+    name: todo-app
+
+  # When no profile is explicitly set (e.g. local `spring-boot:run`), behave as if 'dev' is active.
+  # Tests override via @ActiveProfiles("test"); prod sets SPRING_PROFILES_ACTIVE=prod.
+  profiles:
+    default: dev
+
+  jpa:
+    hibernate:
+      # Flyway owns the schema. Hibernate must never auto-mutate it — only verify
+      # that entities match the migrated schema at startup.
+      ddl-auto: validate
+    # Disable Open-Session-In-View: transactions end when the service layer returns.
+    # OSIV leaks DB connections to the view layer and is an anti-pattern.
+    open-in-view: false
+
+  flyway:
+    enabled: true
+
+  # Docker Compose integration is off by default. The 'dev' profile turns it on so
+  # local `./mvnw spring-boot:run` auto-starts the Postgres defined in compose.yaml.
+  docker:
+    compose:
+      enabled: false
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,db
+        liveness:
+          include: livenessState
+
+logging:
+  level:
+    root: INFO
+    com.pranavgupta.todoapp: INFO

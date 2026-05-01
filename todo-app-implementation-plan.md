@@ -199,12 +199,15 @@ All decisions made 2026-04-19 unless otherwise noted. Each row: what we picked, 
 - Initial `git init` commit, remote repo `pranavgupta97/todo-app` (public), `main` branch pushed
 **Exit criteria:** Repo visible at `https://github.com/pranavgupta97/todo-app`; README renders; plan doc committed.
 
-### Phase 3 — Backend skeleton ⏳
+### Phase 3 — Backend skeleton ✅ Done (2026-04-19)
 **Goal:** Minimal Spring Boot app that starts and serves a health check.
-**Deliverables:** Spring Initializr bootstrap (Web, Validation, JPA, Flyway, Postgres driver, Actuator, Testcontainers). Layered package structure (`controller`, `service`, `repository`, `domain`, `config`). Running locally on port 8080 with `/actuator/health` returning UP.
-**Exit criteria:** `curl localhost:8080/actuator/health` → `{"status":"UP"}`.
+**Deliverables:** Spring Boot 3.5.x project via Initializr (Web, Validation, JPA, Flyway, Postgres driver, Actuator, Testcontainers, DevTools, Docker Compose Support). Main class + default Initializr test scaffolding (`TestcontainersConfiguration`, `TestTodoAppApplication`).
+**Exit criteria:** `./mvnw clean verify` green; `./mvnw spring-boot:run` → `/actuator/health` returns `{"status":"UP"}`. ✅
 
-### Phase 4 — Domain + REST API ⏳
+### Phase 4 — Domain + REST API 🔄 In progress
+Split into two sub-units merged via one PR on branch `phase-4/...`:
+- **Phase 4a — Backend cleanups (before domain work):** YAML config split (`application.yml` + `-dev` + `-test`), package skeleton + `package-info.java` for each, pin Postgres image version to `16-alpine`, tighten test configuration.
+- **Phase 4b — Domain + CRUD API:** `Todo` entity, Flyway `V1__create_todos.sql`, DTOs as records, service, controller, global error handler, `.http` files for manual testing.
 **Goal:** Full CRUD for the `Todo` resource.
 **Deliverables:** `Todo` entity; `TodoDto`, `CreateTodoRequest`, `UpdateTodoRequest`; `TodoController`, `TodoService`, `TodoRepository`; input validation; `@ControllerAdvice` global error handler; `.http` files in `backend/requests/` for manual testing from IntelliJ.
 **Exit criteria:** All CRUD endpoints (plus toggle-complete) work; request/response shapes documented.
@@ -309,6 +312,9 @@ All decisions made 2026-04-19 unless otherwise noted. Each row: what we picked, 
 | 2026-04-19 | Skip custom domain in v1 | Use free `*.fly.dev` + `*.vercel.app` until there's something worth pointing at | Buying a domain upfront |
 | 2026-04-19 | MIT license, public repo | Portfolio visibility; permissive terms | Apache-2.0, private |
 | 2026-04-19 | No authentication in v1 | Keeps scope focused; can add as a learning extension later | Basic auth / JWT / OAuth upfront |
+| 2026-04-19 | Spring Boot **3.5.x** (not 4.0.x) | 4.0 is brand new; tiny docs/community footprint. 3.5 has massive tutorial/StackOverflow coverage, which matters for a learning project. Java 21 is fully supported on 3.5. Novel `-test` starter split in 4.0 adds friction. | Spring Boot 4.0.5 (initial attempt, rolled back) |
+| 2026-04-19 | Default Spring profile is `dev`; tests activate `test` via `@ActiveProfiles` | Makes local `./mvnw spring-boot:run` "just work" without flags, while tests get explicit quieter logging and no docker-compose auto-start | Always require explicit profile flag; or merge all config into base |
+| 2026-04-19 | Pin `postgres:16-alpine` (not `:latest`) everywhere | Floating `:latest` tags are a well-known footgun — reproducibility and prod/dev parity require a pinned version | Use `postgres:latest` |
 
 ---
 
@@ -359,3 +365,5 @@ _(Populated in Phase 3 and expanded each phase.)_
 - Confirmed collaboration preferences: user runs all build/test/git commands; Claude writes code, explains, and guides.
 - **Phase 1 (Dev env setup):** installed SDKMAN 5.22, JDK 21.0.5-tem, Maven 3.9.15, gh 2.90 (authenticated), pnpm 10.33. Verified. ✅
 - **Phase 2 (Repo bootstrap):** scaffold files created locally (`.gitignore`, `.editorconfig`, `LICENSE`, `README.md`, this plan doc, `docs/.gitkeep`). Repo created and initial commit pushed to `main` at https://github.com/pranavgupta97/todo-app. ✅
+- **Phase 3 (Backend skeleton):** initial Initializr attempt on Spring Boot 4.0.5 hit friction (Docker daemon + novel test-starter pattern); rolled back to 3.5.x for a much larger docs/community footprint. Build green, health endpoint UP. Merged via PR #1. ✅
+- **Phase 4a (Backend cleanups):** `application.properties` → `application.yml` + `application-dev.yml` + `application-test.yml`; package skeleton (`controller`, `service`, `repository`, `domain`, `config`, `exception`) with `package-info.java` in each; pinned Postgres image to `postgres:16-alpine` in `compose.yaml` and `TestcontainersConfiguration`; added `@ActiveProfiles("test")` to smoke test; `TestTodoAppApplication` now disables docker-compose to avoid double-provisioning Postgres in dev.
