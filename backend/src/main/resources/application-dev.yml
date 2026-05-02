@@ -1,0 +1,21 @@
+# Active locally when running `./mvnw spring-boot:run` (dev is the default profile).
+# Spring Boot's Docker Compose support detects backend/compose.yaml and auto-starts
+# its Postgres container; the DataSource is wired to it automatically.
+
+spring:
+  docker:
+    compose:
+      enabled: true
+      lifecycle-management: start-and-stop
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+logging:
+  level:
+    com.pranavgupta.todoapp: DEBUG
+    org.hibernate.SQL: DEBUG
+    # Parameter binding — useful while debugging specific SQL statements
+    org.hibernate.orm.jdbc.bind: TRACE

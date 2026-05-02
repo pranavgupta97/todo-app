@@ -1,0 +1,15 @@
+# Active when a test class is annotated @ActiveProfiles("test").
+# Testcontainers provides the DataSource via @ServiceConnection — docker-compose
+# integration is explicitly disabled to avoid double-provisioning.
+
+spring:
+  docker:
+    compose:
+      enabled: false
+  jpa:
+    show-sql: false
+
+logging:
+  level:
+    root: WARN
+    com.pranavgupta.todoapp: INFO
