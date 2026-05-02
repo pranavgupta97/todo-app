@@ -1,0 +1,105 @@
+### Smoke check — health endpoint
+GET http://localhost:8080/actuator/health
+Accept: application/json
+
+###
+
+### List all todos (default — same as ?status=all)
+GET http://localhost:8080/api/todos
+Accept: application/json
+
+###
+
+### List active todos
+GET http://localhost:8080/api/todos?status=active
+Accept: application/json
+
+###
+
+### List completed todos
+GET http://localhost:8080/api/todos?status=completed
+Accept: application/json
+
+###
+
+### Create a todo (201 Created + Location header)
+POST http://localhost:8080/api/todos
+Content-Type: application/json
+
+{
+  "title": "Buy almond milk"
+}
+
+###
+
+### Get one todo by id
+GET http://localhost:8080/api/todos/1
+Accept: application/json
+
+###
+
+### PATCH — toggle completed
+PATCH http://localhost:8080/api/todos/1
+Content-Type: application/json
+
+{
+  "completed": true
+}
+
+###
+
+### PATCH — change title only
+PATCH http://localhost:8080/api/todos/2
+Content-Type: application/json
+
+{
+  "title": "Buy oat milk"
+}
+
+###
+
+### PATCH — both fields
+PATCH http://localhost:8080/api/todos/1
+Content-Type: application/json
+
+{
+  "title": "Renew library books",
+  "completed": false
+}
+
+###
+
+### DELETE — 204 No Content
+DELETE http://localhost:8080/api/todos/3
+
+###
+
+### Validation error — empty title -> 400 ProblemDetail with field errors
+POST http://localhost:8080/api/todos
+Content-Type: application/json
+
+{
+  "title": ""
+}
+
+###
+
+### Validation error — title over 255 chars -> 400
+POST http://localhost:8080/api/todos
+Content-Type: application/json
+
+{
+  "title": "{{$randomString 300}}"
+}
+
+###
+
+### 404 — non-existent id -> 404 ProblemDetail
+GET http://localhost:8080/api/todos/999999
+Accept: application/json
+
+###
+
+### 400 — invalid status filter value -> 400 ProblemDetail
+GET http://localhost:8080/api/todos?status=banana
+Accept: application/json
