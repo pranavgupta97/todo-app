@@ -1,5 +1,30 @@
-### Smoke check — health endpoint
+### -----------------------------------------------------------------------
+### Phase 6 note: every /api/** request below requires an authenticated
+### session. To exercise this file:
+###
+###   1. Start the app with GOOGLE_OAUTH_CLIENT_ID / SECRET env vars set
+###   2. In a browser, visit http://localhost:8080/oauth2/authorization/google
+###      and complete the Google sign-in (use a Gmail you registered as a
+###      test user in Google Cloud Console).
+###   3. After redirect, open browser dev tools → Application → Cookies and
+###      copy the SESSION and XSRF-TOKEN cookie values.
+###   4. JetBrains HTTP Client: paste both into the cookie file (or share
+###      cookies with your browser via Settings → Tools → HTTP Client).
+###   5. For mutating requests (POST/PATCH/DELETE) include the header
+###      X-XSRF-TOKEN with the XSRF-TOKEN cookie's value.
+###
+### The /actuator/health endpoint below stays publicly accessible for k8s/Fly
+### probes and works without any of this.
+### -----------------------------------------------------------------------
+
+### Smoke check — health endpoint (no auth required)
 GET http://localhost:8080/actuator/health
+Accept: application/json
+
+###
+
+### Current user (auth required) — confirms login worked
+GET http://localhost:8080/api/me
 Accept: application/json
 
 ###

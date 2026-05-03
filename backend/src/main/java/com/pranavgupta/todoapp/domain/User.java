@@ -43,8 +43,9 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
-    /** Required no-arg constructor for JPA. */
-    protected User() {}
+    /** Required no-arg constructor for JPA. Public so that
+     *  {@code CustomOidcUserService} can use {@code User::new} as a method reference. */
+    public User() {}
 
     @PrePersist
     void onCreate() {
