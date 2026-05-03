@@ -1,12 +1,18 @@
 # Active locally when running `./mvnw spring-boot:run` (dev is the default profile).
-# Spring Boot's Docker Compose support detects backend/compose.yaml and auto-starts
-# its Postgres container; the DataSource is wired to it automatically.
+# Spring Boot's Docker Compose support reads the file path below and starts/stops
+# the Postgres container alongside the JVM. The DataSource is wired automatically
+# from the running container — no JDBC URL hard-coded here.
+#
+# Path is relative to the JVM's working directory, which is `backend/` when
+# running via the Maven wrapper. From `backend/`, `../infra/docker-compose.dev.yml`
+# resolves to the project-root infra file.
 
 spring:
   docker:
     compose:
       enabled: true
       lifecycle-management: start-and-stop
+      file: ../infra/docker-compose.dev.yml
   jpa:
     show-sql: true
     properties:

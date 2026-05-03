@@ -1,0 +1,31 @@
+# ============================================================================
+# Local development Docker Compose file.
+#
+# Provides Postgres for either of the two supported dev workflows:
+#
+#   1. Auto-managed mode (default for normal dev)
+#      `cd backend && ./mvnw spring-boot:run`
+#      Spring Boot's Docker Compose support reads this file (path configured
+#      in application-dev.yml as spring.docker.compose.file) and starts/stops
+#      the Postgres container alongside the JVM lifecycle.
+#
+#   2. Manual mode (when DB lifecycle should be independent of the app)
+#      `docker compose -f infra/docker-compose.dev.yml up -d`   (then run app)
+#      `docker compose -f infra/docker-compose.dev.yml down`    (when done)
+#      `docker compose -f infra/docker-compose.dev.yml down -v` (wipe DB state)
+#
+# The host port is pinned to 5433 (not the Postgres default 5432) to avoid
+# conflicting with locally-installed Postgres (e.g. Postgres.app, Homebrew).
+# Inside the container the service still listens on 5432; only the host-side
+# mapping changes.
+# ============================================================================
+
+services:
+  postgres:
+    image: 'postgres:16-alpine'
+    environment:
+      - 'POSTGRES_DB=mydatabase'
+      - 'POSTGRES_PASSWORD=secret'
+      - 'POSTGRES_USER=myuser'
+    ports:
+      - '5433:5432'

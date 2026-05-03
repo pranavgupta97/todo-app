@@ -259,7 +259,7 @@ All decisions made on `2026-04-19` unless otherwise noted. Each row: what we pic
 **Deliverables:** Spring Boot 3.5.x project via Initializr (Web, Validation, JPA, Flyway, Postgres driver, Actuator, Testcontainers, DevTools, Docker Compose Support). Main class + default Initializr test scaffolding (`TestcontainersConfiguration`, `TestTodoAppApplication`).
 **Exit criteria:** `./mvnw clean verify` green; `./mvnw spring-boot:run` → `/actuator/health` returns `{"status":"UP"}`. Merged via PR #1. ✅
 
-### Phase 4 — Domain + REST API 🔄 In progress (branch `phase-4/domain-and-api`)
+### Phase 4 — Domain + REST API ✅ Done (2026-05-01, merged via PR #2)
 Two sub-units, two commits, one PR.
 
 #### Phase 4a — Backend cleanups ✅ Done (2026-04-30, committed as `eaf5bb3`)
@@ -271,7 +271,7 @@ Two sub-units, two commits, one PR.
 - Pinned `postgres:16-alpine` in `compose.yaml` and `TestcontainersConfiguration`
 - `TestTodoAppApplication` disables docker-compose (avoids double-provisioning Postgres in dev with Testcontainers)
 
-#### Phase 4b — Domain + CRUD API 🔄 In progress
+#### Phase 4b — Domain + CRUD API ✅ Done (2026-05-01, committed as `2ea5c55`)
 **Goal:** Full CRUD for the `Todo` resource, with schema designed forward to support auth (Phase 6) without back-adding FK columns.
 
 **Deliverables:**
@@ -321,10 +321,15 @@ CREATE INDEX idx_todos_user_completed ON todos(user_id, completed);
 
 **Exit criteria:** all 5 endpoints work via `todos.http`; `./mvnw clean verify` green; PR opened, reviewed, squash-merged.
 
-### Phase 5 — Persistence with Postgres + Flyway ⏳
-**Goal:** Solidify the local-Postgres developer story and add repository-layer integration tests.
-**Deliverables:** `infra/docker-compose.dev.yml` (project-root level, mirrors `backend/compose.yaml` content); repository integration tests using Testcontainers; documented dev DB workflow in §7 below.
-**Exit criteria:** Both run modes (auto via Spring Boot Docker Compose Support, manual via `docker compose up -d`) work; integration tests green.
+### Phase 5 — Dev infrastructure polish 🔄 In progress (branch `phase-5/dev-infra-polish`)
+**Note on scope:** the Flyway migration and JPA mappings originally scheduled here landed in Phase 4b (along with the auth-ready schema design); repository/integration tests deliberately deferred to Phase 7 (post-auth). What's left for Phase 5 is small but real: introduce the project-root `infra/` directory pattern and document the local dev workflow.
+**Goal:** Move the dev DB compose file out of `backend/` into a project-level `infra/` so application code stays cleanly separated from infrastructure; document the local dev workflow in the README so a fresh contributor can get running.
+**Deliverables:**
+- Move `backend/compose.yaml` → `infra/docker-compose.dev.yml` (project root); change host-port mapping to `5433:5432` (deterministic, IntelliJ DB-tool friendly, avoids conflict with locally-installed Postgres on 5432)
+- Add `spring.docker.compose.file: ../infra/docker-compose.dev.yml` to `application-dev.yml` so auto-managed mode keeps working
+- Expand README "Local Development" section: prerequisites, two run modes (auto-managed vs manual), test workflow, IntelliJ DB connection settings, manual API exercise
+- Plan doc: this phase + Phase 4 marked done; Phase 5 deliverables updated to reflect the realised (lighter) scope; session log entry
+**Exit criteria:** `./mvnw spring-boot:run` still auto-starts the DB (now from the new path); `docker compose -f infra/docker-compose.dev.yml up -d` + `./mvnw spring-boot:run` (manual mode) also works; README's "Local Development" section is complete enough for a fresh dev to get up and running without a guide.
 
 ### Phase 6 — Authentication (OIDC, Google) ⏳
 **Goal:** Real users sign in with Google; every API call is scoped to the authenticated user.
@@ -547,6 +552,11 @@ These are the working agreements between the author and Claude. Captured here so
 - **Phase 1 (Dev env setup):** installed SDKMAN 5.22, JDK 21.0.5-tem, Maven 3.9.15, gh 2.90 (authenticated), pnpm 10.33. Verified. ✅
 - **Phase 2 (Repo bootstrap):** scaffold files created locally (`.gitignore`, `.editorconfig`, `LICENSE`, `README.md`, this plan doc, `docs/.gitkeep`). Repo created and initial commit pushed to `main` at https://github.com/pranavgupta97/todo-app. ✅
 - **Phase 3 (Backend skeleton):** initial Initializr attempt on Spring Boot 4.0.5 hit friction (Docker daemon + novel test-starter pattern); rolled back to 3.5.x for a much larger docs/community footprint. Build green, health endpoint UP. Merged via PR #1. ✅
+
+### 2026-05-02 — Session 3: Phase 4 merged + Phase 5 (dev infra polish)
+- **Phase 4b reviewed and merged via PR #2** (+1113/-92 across 31 files). 16 new files: V1 schema migration with system-user seed, JPA entities (User + Todo), repositories with user-scoped query methods, DTOs as records in `dto/`, `TodoStatusFilterConverter` for case-insensitive `?status=`, `TodoService` with transactional boundaries + per-user scoping on every method, `TodoController` with the single auth seam (`currentUserId()`), `GlobalExceptionHandler` emitting RFC 7807 `ProblemDetail`, `todos.http` for IntelliJ. Plan doc comprehensively refreshed (auth scope added, all phases renumbered to 18 total, §10 collaboration conventions, §3 auth-flow Mermaid diagram). Verified locally: `./mvnw clean verify` green, all 5 endpoints work, ProblemDetail responses correct. ✅
+- **Test plan reconfirmed.** Author asked about test coverage; agreed unit + integration tests stay deferred to Phase 7 (post-auth) so they're written once knowing the security model. Smoke test (`TodoAppApplicationTests`) remains the baseline today.
+- **Phase 5 (Dev infrastructure polish) — in progress on branch `phase-5/dev-infra-polish`:** moved `backend/compose.yaml` → `infra/docker-compose.dev.yml` with port `5433:5432` (avoids conflict with Postgres.app on 5432, makes IntelliJ DB connections deterministic); added `spring.docker.compose.file` config to `application-dev.yml` so auto-mode keeps working from the new path; comprehensive README "Local Development" section covering prerequisites, two run modes, test workflow, DB-tool settings, and manual API exercise.
 
 ### 2026-04-30 / 2026-05-01 — Session 2: Phase 4 + scope expansion (auth)
 - **Phase 4a (Backend cleanups):** YAML config split (`application.yml` + `-dev` + `-test`); default profile `dev`; package skeleton + `package-info.java` ×6; pinned `postgres:16-alpine`; tightened test config; `TestTodoAppApplication` disables docker-compose. Committed as `eaf5bb3` on branch `phase-4/domain-and-api`. ✅
