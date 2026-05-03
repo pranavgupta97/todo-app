@@ -5,10 +5,12 @@ import com.pranavgupta.todoapp.dto.CreateTodoRequest;
 import com.pranavgupta.todoapp.dto.TodoResponse;
 import com.pranavgupta.todoapp.dto.TodoStatusFilter;
 import com.pranavgupta.todoapp.dto.UpdateTodoRequest;
+import com.pranavgupta.todoapp.security.AppOidcUser;
 import com.pranavgupta.todoapp.service.TodoService;
 
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -26,17 +28,16 @@ import java.util.List;
 /**
  * REST endpoints for the {@link Todo} resource.
  *
- * <p>v1 hardcodes the owner of every todo to the seeded system user (id=1).
- * Phase 6 (auth) replaces {@link #currentUserId()} with a lookup from the
- * authenticated {@code Authentication} / {@code OidcUser} principal — that's
- * the entire diff for adding multi-user awareness here.</p>
+ * <p>Phase 6 made this class auth-aware: every method takes the authenticated
+ * principal as {@code @AuthenticationPrincipal AppOidcUser}, and the user id
+ * comes from {@code principal.getAppUserId()} (set during the login OAuth
+ * callback by {@code CustomOidcUserService}). The service + repository layers
+ * were already user-scoped, so this is the only file in the data path that
+ * needed to change.</p>
  */
 @RestController
 @RequestMapping("/api/todos")
 public class TodoController {
-
-    /** Hardcoded for v1; Phase 6 replaces this with the authenticated user's id. */
-    private static final long V1_SYSTEM_USER_ID = 1L;
 
     private final TodoService todoService;
 
@@ -46,21 +47,26 @@ public class TodoController {
 
     @GetMapping
     public List<TodoResponse> list(
+            @AuthenticationPrincipal AppOidcUser principal,
             @RequestParam(name = "status", defaultValue = "all") TodoStatusFilter status) {
-        return todoService.findAllForUser(currentUserId(), status)
+        return todoService.findAllForUser(principal.getAppUserId(), status)
                 .stream()
                 .map(TodoResponse::from)
                 .toList();
     }
 
     @GetMapping("/{id}")
-    public TodoResponse getOne(@PathVariable Long id) {
-        return TodoResponse.from(todoService.findByIdForUser(currentUserId(), id));
+    public TodoResponse getOne(
+            @AuthenticationPrincipal AppOidcUser principal,
+            @PathVariable Long id) {
+        return TodoResponse.from(todoService.findByIdForUser(principal.getAppUserId(), id));
     }
 
     @PostMapping
-    public ResponseEntity<TodoResponse> create(@Valid @RequestBody CreateTodoRequest request) {
-        Todo created = todoService.createForUser(currentUserId(), request.title());
+    public ResponseEntity<TodoResponse> create(
+            @AuthenticationPrincipal AppOidcUser principal,
+            @Valid @RequestBody CreateTodoRequest request) {
+        Todo created = todoService.createForUser(principal.getAppUserId(), request.title());
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
                 .buildAndExpand(created.getId())
@@ -69,24 +75,20 @@ public class TodoController {
     }
 
     @PatchMapping("/{id}")
-    public TodoResponse update(@PathVariable Long id, @Valid @RequestBody UpdateTodoRequest request) {
+    public TodoResponse update(
+            @AuthenticationPrincipal AppOidcUser principal,
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateTodoRequest request) {
         Todo updated = todoService.updateForUser(
-                currentUserId(), id, request.title(), request.completed());
+                principal.getAppUserId(), id, request.title(), request.completed());
         return TodoResponse.from(updated);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        todoService.deleteForUser(currentUserId(), id);
+    public ResponseEntity<Void> delete(
+            @AuthenticationPrincipal AppOidcUser principal,
+            @PathVariable Long id) {
+        todoService.deleteForUser(principal.getAppUserId(), id);
         return ResponseEntity.noContent().build();
-    }
-
-    /**
-     * The single seam where authentication will plug in. Phase 6 replaces this
-     * with a lookup from {@link org.springframework.security.core.Authentication}
-     * (and an upsert of the {@code User} row keyed by OIDC {@code sub}).
-     */
-    private Long currentUserId() {
-        return V1_SYSTEM_USER_ID;
     }
 }

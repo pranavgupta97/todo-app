@@ -25,6 +25,23 @@ spring:
     compose:
       enabled: false
 
+  # OIDC / OAuth2 client config. Spring auto-supplies issuer URI, JWK URI,
+  # and standard scopes for the well-known "google" provider — we only need
+  # to wire client-id and client-secret. Both come from env vars (see
+  # backend/.env.example); empty defaults mean the app still starts but
+  # login won't succeed until the vars are set.
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
+            client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET:}
+            scope:
+              - openid
+              - profile
+              - email
+
 server:
   port: 8080
 

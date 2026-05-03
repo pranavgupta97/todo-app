@@ -9,6 +9,20 @@ spring:
   jpa:
     show-sql: false
 
+  # OAuth2 client placeholders for tests. Spring Security's autoconfig validates
+  # that client-id/client-secret are present at startup — without these, the
+  # ApplicationContext fails to load when env vars aren't set (which is the
+  # normal case during CI/local test runs). Real OIDC flows are bypassed in
+  # tests via Spring Security's test support (@WithMockUser, oidcLogin()), so
+  # these placeholder values are never actually used to call Google.
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: test-client-id
+            client-secret: test-client-secret
+
 logging:
   level:
     root: WARN

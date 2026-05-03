@@ -140,17 +140,62 @@ When the dev compose stack is running (either mode), connect with:
 
 ### Manually exercising the API
 
-Open `backend/requests/todos.http` in IntelliJ and click the green ▶ next to any request. The file covers all 5 endpoints plus validation errors, 404s, and bad query params.
+After **Phase 6 (auth)**, every `/api/**` endpoint requires a logged-in session — see [Authentication](#authentication) below for the login flow you'll need to do first. The `todos.http` file in `backend/requests/` covers all endpoints (CRUD, filters, validation errors, 404s) and includes a header explaining how to share cookies with the JetBrains HTTP client.
 
-Or with `curl`:
+## Authentication
+
+Every `/api/**` endpoint requires a logged-in session. Sign-in uses **Google's OIDC** via Spring Security OAuth2 Client.
+
+### One-time setup (local dev)
+
+1. **Provision a Google OAuth client** in [Google Cloud Console](https://console.cloud.google.com/):
+   - Create a project: `todo-app-dev`
+   - **OAuth consent screen** → External · App name: "Todo App (dev)" · Scopes: `openid email profile` · add your Gmail as a test user
+   - **Credentials** → Create OAuth client ID → Web application
+     - Authorized redirect URI: **`http://localhost:8080/login/oauth2/code/google`**
+   - Save the Client ID and Client Secret
+
+2. **Drop credentials into `backend/.env`** (copy from `.env.example`, then edit):
+   ```bash
+   cp backend/.env.example backend/.env
+   # then edit backend/.env and fill in the real values
+   ```
+   `.env` is gitignored — never commit it.
+
+3. **Load env vars before running the app**:
+   ```bash
+   set -a && source backend/.env && set +a
+   cd backend && ./mvnw spring-boot:run
+   ```
+   Or paste the variables into IntelliJ's run-config "Environment variables" field.
+
+### Logging in
+
+1. Run the app (above).
+2. Visit **`http://localhost:8080/oauth2/authorization/google`** in your browser.
+3. Sign in with the Gmail you added as a test user in GCP.
+4. You're redirected back with a `SESSION` cookie set; subsequent browser visits to `/api/**` carry it automatically.
+
+### Inspecting the current session
 
 ```bash
-curl -s -X POST localhost:8080/api/todos \
-  -H 'Content-Type: application/json' \
-  -d '{"title":"Buy almond milk"}' | jq
-
-curl -s 'localhost:8080/api/todos?status=active' | jq
+# Replace <SESSION> with the value from your browser dev tools
+curl -s --cookie "SESSION=<SESSION>" localhost:8080/api/me | jq
+# {"id":2,"email":"you@gmail.com","displayName":"Your Name"}
 ```
+
+### Logging out
+
+```bash
+curl -s -X POST \
+  --cookie "SESSION=<SESSION>; XSRF-TOKEN=<XSRF>" \
+  --header "X-XSRF-TOKEN: <XSRF>" \
+  localhost:8080/logout
+```
+
+### Why CSRF protection requires the `X-XSRF-TOKEN` header
+
+The app uses cookie-based sessions, which means the browser auto-sends the `SESSION` cookie on every request — including any cross-site requests an attacker tricks you into making. CSRF protection blocks that: mutating requests (POST/PATCH/DELETE/PUT) must echo the `XSRF-TOKEN` cookie value as an `X-XSRF-TOKEN` header, which a malicious cross-site form can't fabricate. Phase 11's React frontend will do this automatically; for manual testing, you copy the cookie value into the header yourself.
 
 ## Deployment
 

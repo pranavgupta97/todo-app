@@ -321,7 +321,7 @@ CREATE INDEX idx_todos_user_completed ON todos(user_id, completed);
 
 **Exit criteria:** all 5 endpoints work via `todos.http`; `./mvnw clean verify` green; PR opened, reviewed, squash-merged.
 
-### Phase 5 — Dev infrastructure polish 🔄 In progress (branch `phase-5/dev-infra-polish`)
+### Phase 5 — Dev infrastructure polish ✅ Done (2026-05-03, merged via PR #3)
 **Note on scope:** the Flyway migration and JPA mappings originally scheduled here landed in Phase 4b (along with the auth-ready schema design); repository/integration tests deliberately deferred to Phase 7 (post-auth). What's left for Phase 5 is small but real: introduce the project-root `infra/` directory pattern and document the local dev workflow.
 **Goal:** Move the dev DB compose file out of `backend/` into a project-level `infra/` so application code stays cleanly separated from infrastructure; document the local dev workflow in the README so a fresh contributor can get running.
 **Deliverables:**
@@ -331,7 +331,18 @@ CREATE INDEX idx_todos_user_completed ON todos(user_id, completed);
 - Plan doc: this phase + Phase 4 marked done; Phase 5 deliverables updated to reflect the realised (lighter) scope; session log entry
 **Exit criteria:** `./mvnw spring-boot:run` still auto-starts the DB (now from the new path); `docker compose -f infra/docker-compose.dev.yml up -d` + `./mvnw spring-boot:run` (manual mode) also works; README's "Local Development" section is complete enough for a fresh dev to get up and running without a guide.
 
-### Phase 6 — Authentication (OIDC, Google) ⏳
+### Phase 6 — Authentication (OIDC, Google) 🔄 In progress (branch `phase-6/auth-oidc-google`)
+Two sub-units, two commits, one PR — same pattern as Phase 4.
+
+#### Phase 6a — Google Cloud Console + secrets ⏳ (user-side; runs in parallel with 6b)
+- Provision OAuth Client ID at https://console.cloud.google.com/ (project `todo-app-dev`)
+- Configure OAuth consent screen (External, app name "Todo App (dev)", scopes openid+profile+email, add own Gmail as test user)
+- Authorized redirect URI: `http://localhost:8080/login/oauth2/code/google`
+- Copy Client ID + Client Secret into `backend/.env` (gitignored, copied from `.env.example`)
+
+#### Phase 6b — Backend security wiring 🔄 In progress
+**Files added:** `config/SecurityConfig.java` (filter chain · oauth2Login · CSRF cookie repo · logout); `security/AppOidcUser.java` (extends DefaultOidcUser, carries appUserId); `security/package-info.java`; `service/CustomOidcUserService.java` (upserts User on login); `controller/MeController.java` (GET /api/me); `dto/UserResponse.java`; `db/migration/V2__drop_todos_user_id_default.sql`; `backend/.env.example`.
+**Files modified:** `pom.xml` (+ starter-security, + starter-oauth2-client, + spring-security-test); `application.yml` (OIDC client registration, env-var-driven); `domain/User.java` (constructor visibility public so CustomOidcUserService can use `User::new`); `controller/TodoController.java` (`@AuthenticationPrincipal AppOidcUser` on every method, `currentUserId()` and `V1_SYSTEM_USER_ID` removed); `requests/todos.http` (login-flow header note); `README.md` (Authentication section + GCP setup walkthrough).
 **Goal:** Real users sign in with Google; every API call is scoped to the authenticated user.
 **Deliverables:**
 - Add `spring-boot-starter-security` and `spring-boot-starter-oauth2-client` to `pom.xml`
@@ -458,6 +469,10 @@ CREATE INDEX idx_todos_user_completed ON todos(user_id, completed);
 | 2026-04-30 | **RFC 7807 `ProblemDetail`** for error responses | First-class in Spring Boot 3; consistent machine-readable shape across all errors; the FE can rely on a single contract | Custom error envelope per endpoint |
 | 2026-04-30 | **DTOs as Java 21 records** in a top-level `dto/` package | Records are immutable + boilerplate-free; top-level package makes them discoverable for OpenAPI + TS-client generation | POJOs with Lombok; `controller/dto/` nested |
 | 2026-04-30 | **Auth phase inserted between Phase 5 and Phase 6** (renumbered everything after) | Tests get written once knowing auth exists; OpenAPI captures secured spec; UI design accommodates login screen | Bolt auth on after the frontend is built |
+| 2026-05-03 | **`AppOidcUser extends DefaultOidcUser` carrying `appUserId`** | Set once during the OAuth callback in CustomOidcUserService; controllers read it via `@AuthenticationPrincipal` with no per-request DB lookup | DB-lookup-per-request via a `@CurrentUser` resolver; stash id in HTTP session attribute |
+| 2026-05-03 | **CSRF stays enabled** with `CookieCsrfTokenRepository.withHttpOnlyFalse()` from day one of auth | Production-correct setup for cookie-auth + SPA; teaches the right pattern; cost is documented friction for `.http` testing during this phase | Disable CSRF until Phase 11 (would teach an anti-pattern that we'd then have to undo) |
+| 2026-05-03 | **Leave the v1 system user's todos in place** when auth lands | Migrations should not delete user data; the orphans are harmless (no real person can authenticate as `external_id='system'`) | Wipe the v1 todos in V2 migration |
+| 2026-05-03 | **`User` constructor is `public`** (not `protected`) | Cross-package factory access (`User::new` from `CustomOidcUserService`); the protected-by-default discipline was overkill for a project this size | Add a `public static User createBlank()` factory; keep constructor protected |
 
 ---
 
@@ -552,6 +567,12 @@ These are the working agreements between the author and Claude. Captured here so
 - **Phase 1 (Dev env setup):** installed SDKMAN 5.22, JDK 21.0.5-tem, Maven 3.9.15, gh 2.90 (authenticated), pnpm 10.33. Verified. ✅
 - **Phase 2 (Repo bootstrap):** scaffold files created locally (`.gitignore`, `.editorconfig`, `LICENSE`, `README.md`, this plan doc, `docs/.gitkeep`). Repo created and initial commit pushed to `main` at https://github.com/pranavgupta97/todo-app. ✅
 - **Phase 3 (Backend skeleton):** initial Initializr attempt on Spring Boot 4.0.5 hit friction (Docker daemon + novel test-starter pattern); rolled back to 3.5.x for a much larger docs/community footprint. Build green, health endpoint UP. Merged via PR #1. ✅
+
+### 2026-05-03 — Session 4: Phase 5 merged + Phase 6 (auth) in progress
+- **Phase 5 merged via PR #3** — `infra/docker-compose.dev.yml` at project root, port pinned to `5433:5432`, Spring Boot reads it via `spring.docker.compose.file`, comprehensive README "Local Development" section. ✅
+- **Phase 6 (Authentication) in progress on branch `phase-6/auth-oidc-google`.** Sub-split: 6a (user does Google Cloud Console clicks + populates `backend/.env`), 6b (Spring Security + OIDC client + per-user authorization wiring — Claude writes the code).
+- **Phase 6b code written:** SecurityConfig filter chain (permits health/login/oauth2/error, requires auth on everything else, oauth2Login wired to CustomOidcUserService, CSRF enabled with cookie repo, logout to /); AppOidcUser carrying appUserId so controllers skip per-request DB lookup; CustomOidcUserService upserting User row on every login (matched by OIDC sub → external_id, refreshes email/displayName); MeController serving GET /api/me; UserResponse record; V2 migration dropping todos.user_id DEFAULT 1; .env.example template; pom.xml gets starter-security + starter-oauth2-client + spring-security-test; application.yml gets google client registration reading env vars; TodoController refactored to receive `@AuthenticationPrincipal AppOidcUser principal` on every endpoint (the single auth-seam from Phase 4b); User.java's no-arg constructor changed protected→public for cross-package factory access; README + plan doc updates.
+- **Pending:** user does 6a in Google Cloud Console, drops credentials into `backend/.env`, runs the build + verifies the end-to-end browser login flow.
 
 ### 2026-05-02 — Session 3: Phase 4 merged + Phase 5 (dev infra polish)
 - **Phase 4b reviewed and merged via PR #2** (+1113/-92 across 31 files). 16 new files: V1 schema migration with system-user seed, JPA entities (User + Todo), repositories with user-scoped query methods, DTOs as records in `dto/`, `TodoStatusFilterConverter` for case-insensitive `?status=`, `TodoService` with transactional boundaries + per-user scoping on every method, `TodoController` with the single auth seam (`currentUserId()`), `GlobalExceptionHandler` emitting RFC 7807 `ProblemDetail`, `todos.http` for IntelliJ. Plan doc comprehensively refreshed (auth scope added, all phases renumbered to 18 total, §10 collaboration conventions, §3 auth-flow Mermaid diagram). Verified locally: `./mvnw clean verify` green, all 5 endpoints work, ProblemDetail responses correct. ✅
