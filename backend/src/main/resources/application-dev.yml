@@ -25,3 +25,13 @@ logging:
     org.hibernate.SQL: DEBUG
     # Parameter binding — useful while debugging specific SQL statements
     org.hibernate.orm.jdbc.bind: TRACE
+
+# Disable CSRF in dev so manual API testing via backend/requests/todos.http
+# only needs a JSESSIONID cookie (no X-XSRF-TOKEN header dance). On localhost
+# there are no cross-site attackers, so CSRF adds friction with no security
+# benefit. Tests run against the base config (CSRF on); prod has CSRF on too,
+# and the React frontend (Phase 11) handles the token echo automatically.
+app:
+  security:
+    csrf:
+      enabled: false
