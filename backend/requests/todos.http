@@ -1,54 +1,62 @@
 ### -----------------------------------------------------------------------
-### Phase 6 note: every /api/** request below requires an authenticated
-### session. To exercise this file:
+### Local API testing workflow
 ###
-###   1. Start the app with GOOGLE_OAUTH_CLIENT_ID / SECRET env vars set
-###   2. In a browser, visit http://localhost:8080/oauth2/authorization/google
-###      and complete the Google sign-in (use a Gmail you registered as a
-###      test user in Google Cloud Console).
-###   3. After redirect, open browser dev tools → Application → Cookies and
-###      copy the SESSION and XSRF-TOKEN cookie values.
-###   4. JetBrains HTTP Client: paste both into the cookie file (or share
-###      cookies with your browser via Settings → Tools → HTTP Client).
-###   5. For mutating requests (POST/PATCH/DELETE) include the header
-###      X-XSRF-TOKEN with the XSRF-TOKEN cookie's value.
+### The dev profile disables CSRF (see SecurityConfig), so requests below
+### only need a session cookie — no X-XSRF-TOKEN header to wrangle.
 ###
-### The /actuator/health endpoint below stays publicly accessible for k8s/Fly
-### probes and works without any of this.
+### One-time per app restart:
+###   1. Run the app:  `./mvnw spring-boot:run`  (with GOOGLE_OAUTH_*
+###      env vars set; see README "Authentication" section).
+###   2. In your browser, visit  http://localhost:8080/api/me  →  sign in
+###      with Google.
+###   3. Open browser DevTools → Application → Cookies → localhost:8080
+###      and copy the value of the JSESSIONID cookie.
+###   4. Paste it into  backend/requests/http-client.private.env.json
+###      (copy from the .example file if you don't have it yet — the
+###      .private.env.json file is gitignored).
+###   5. In the JetBrains HTTP Client toolbar (top-right of this editor),
+###      pick the "dev" environment, then click ▶ on any request.
+###
+### When the cookie expires (server restart, logout), repeat steps 2-4.
 ### -----------------------------------------------------------------------
 
-### Smoke check — health endpoint (no auth required)
-GET http://localhost:8080/actuator/health
+### Smoke check — health endpoint (public, no cookie needed)
+GET {{host}}/actuator/health
 Accept: application/json
 
 ###
 
 ### Current user (auth required) — confirms login worked
-GET http://localhost:8080/api/me
+GET {{host}}/api/me
+Cookie: JSESSIONID={{JSESSIONID}}
 Accept: application/json
 
 ###
 
 ### List all todos (default — same as ?status=all)
-GET http://localhost:8080/api/todos
+GET {{host}}/api/todos
+Cookie: JSESSIONID={{JSESSIONID}}
 Accept: application/json
 
 ###
 
 ### List active todos
-GET http://localhost:8080/api/todos?status=active
+GET {{host}}/api/todos?status=active
+Cookie: JSESSIONID={{JSESSIONID}}
 Accept: application/json
 
 ###
 
 ### List completed todos
-GET http://localhost:8080/api/todos?status=completed
+GET {{host}}/api/todos?status=completed
+Cookie: JSESSIONID={{JSESSIONID}}
 Accept: application/json
 
 ###
 
 ### Create a todo (201 Created + Location header)
-POST http://localhost:8080/api/todos
+POST {{host}}/api/todos
+Cookie: JSESSIONID={{JSESSIONID}}
 Content-Type: application/json
 
 {
@@ -58,13 +66,15 @@ Content-Type: application/json
 ###
 
 ### Get one todo by id
-GET http://localhost:8080/api/todos/1
+GET {{host}}/api/todos/1
+Cookie: JSESSIONID={{JSESSIONID}}
 Accept: application/json
 
 ###
 
 ### PATCH — toggle completed
-PATCH http://localhost:8080/api/todos/1
+PATCH {{host}}/api/todos/1
+Cookie: JSESSIONID={{JSESSIONID}}
 Content-Type: application/json
 
 {
@@ -74,7 +84,8 @@ Content-Type: application/json
 ###
 
 ### PATCH — change title only
-PATCH http://localhost:8080/api/todos/2
+PATCH {{host}}/api/todos/2
+Cookie: JSESSIONID={{JSESSIONID}}
 Content-Type: application/json
 
 {
@@ -84,7 +95,8 @@ Content-Type: application/json
 ###
 
 ### PATCH — both fields
-PATCH http://localhost:8080/api/todos/1
+PATCH {{host}}/api/todos/1
+Cookie: JSESSIONID={{JSESSIONID}}
 Content-Type: application/json
 
 {
@@ -95,12 +107,14 @@ Content-Type: application/json
 ###
 
 ### DELETE — 204 No Content
-DELETE http://localhost:8080/api/todos/3
+DELETE {{host}}/api/todos/1
+Cookie: JSESSIONID={{JSESSIONID}}
 
 ###
 
 ### Validation error — empty title -> 400 ProblemDetail with field errors
-POST http://localhost:8080/api/todos
+POST {{host}}/api/todos
+Cookie: JSESSIONID={{JSESSIONID}}
 Content-Type: application/json
 
 {
@@ -110,7 +124,8 @@ Content-Type: application/json
 ###
 
 ### Validation error — title over 255 chars -> 400
-POST http://localhost:8080/api/todos
+POST {{host}}/api/todos
+Cookie: JSESSIONID={{JSESSIONID}}
 Content-Type: application/json
 
 {
@@ -120,11 +135,13 @@ Content-Type: application/json
 ###
 
 ### 404 — non-existent id -> 404 ProblemDetail
-GET http://localhost:8080/api/todos/999999
+GET {{host}}/api/todos/999999
+Cookie: JSESSIONID={{JSESSIONID}}
 Accept: application/json
 
 ###
 
 ### 400 — invalid status filter value -> 400 ProblemDetail
-GET http://localhost:8080/api/todos?status=banana
+GET {{host}}/api/todos?status=banana
+Cookie: JSESSIONID={{JSESSIONID}}
 Accept: application/json

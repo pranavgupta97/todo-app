@@ -42,6 +42,16 @@ spring:
               - profile
               - email
 
+# Application-specific settings (prefixed `app.` to avoid colliding with
+# Spring's own configuration keys).
+app:
+  security:
+    csrf:
+      # CSRF is on by default — applies to base/test/prod. The dev profile
+      # overrides this to false for ergonomic .http-file-based API testing
+      # (see SecurityConfig javadoc).
+      enabled: true
+
 server:
   port: 8080
 

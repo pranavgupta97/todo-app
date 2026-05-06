@@ -140,7 +140,7 @@ When the dev compose stack is running (either mode), connect with:
 
 ### Manually exercising the API
 
-After **Phase 6 (auth)**, every `/api/**` endpoint requires a logged-in session — see [Authentication](#authentication) below for the login flow you'll need to do first. The `todos.http` file in `backend/requests/` covers all endpoints (CRUD, filters, validation errors, 404s) and includes a header explaining how to share cookies with the JetBrains HTTP client.
+After **Phase 6 (auth)**, every `/api/**` endpoint requires a logged-in session — see [Authentication](#authentication) below for the one-time setup. Once that's done, the `todos.http` file in `backend/requests/` (covering all endpoints — CRUD, filters, validation errors, 404s) is fully runnable from inside IntelliJ via the env-file workflow described in [Local API testing workflow](#local-api-testing-workflow-intellij-http-client).
 
 ## Authentication
 
@@ -172,30 +172,59 @@ Every `/api/**` endpoint requires a logged-in session. Sign-in uses **Google's O
 ### Logging in
 
 1. Run the app (above).
-2. Visit **`http://localhost:8080/oauth2/authorization/google`** in your browser.
+2. Visit **`http://localhost:8080/api/me`** in your browser. Spring Security intercepts the unauthenticated request and redirects you to Google.
 3. Sign in with the Gmail you added as a test user in GCP.
-4. You're redirected back with a `SESSION` cookie set; subsequent browser visits to `/api/**` carry it automatically.
+4. You're redirected back to `/api/me` with a `JSESSIONID` cookie set; subsequent browser visits to `/api/**` carry it automatically.
 
-### Inspecting the current session
+### Local API testing workflow (IntelliJ HTTP Client)
+
+The `backend/requests/todos.http` file is wired to use the JetBrains HTTP Client's environment-file system for cookie management. After a one-time browser login each session, paste your `JSESSIONID` into a private (gitignored) env file and every request in `todos.http` automatically picks it up.
+
+1. **Log in via browser** (steps 1–3 above).
+
+2. **Grab `JSESSIONID`** from browser DevTools → Application → Cookies → `localhost:8080`. Copy the value.
+
+3. **Set up the private env file once**:
+   ```bash
+   cp backend/requests/http-client.private.env.json.example \
+      backend/requests/http-client.private.env.json
+   ```
+   Edit `http-client.private.env.json` and paste your real `JSESSIONID`. (The file is gitignored.)
+
+4. **Run requests**: open `backend/requests/todos.http` in IntelliJ, pick the **`dev`** environment from the toolbar (top-right of the editor), then click ▶ next to any request. **Every request — including POST/PATCH/DELETE — works with just the session cookie**, because the dev profile disables CSRF (see below).
+
+When the cookie expires (server restart, logout, etc.), repeat steps 1–3.
+
+### Why CSRF is off in dev (and on everywhere else)
+
+CSRF protection defends against attackers tricking a logged-in user's browser into making cross-site requests with their cookies. **On `localhost`, you're the only user — there are no cross-site attackers — so CSRF adds friction with no security benefit.** Standard practice in many teams.
+
+The dev profile sets `app.security.csrf.enabled: false`. The base config (used by the test profile and prod) keeps it on:
+- **Tests** (Phase 7) exercise CSRF behavior properly via Spring Security test support.
+- **Production** has CSRF on; the React frontend (Phase 11) handles the `XSRF-TOKEN` cookie + `X-XSRF-TOKEN` header echo automatically. Real users never see this.
+
+If you ever want to test CSRF behavior locally (manually validating the production posture), comment out the `app.security.csrf.enabled` block in `application-dev.yml` and restart.
+
+### Inspecting the current session via `curl`
 
 ```bash
-# Replace <SESSION> with the value from your browser dev tools
-curl -s --cookie "SESSION=<SESSION>" localhost:8080/api/me | jq
+# In dev (CSRF off): just the cookie is enough.
+curl -s --cookie "JSESSIONID=<JSESSIONID>" localhost:8080/api/me | jq
 # {"id":2,"email":"you@gmail.com","displayName":"Your Name"}
 ```
 
 ### Logging out
 
 ```bash
+# Dev — CSRF off
+curl -s -X POST --cookie "JSESSIONID=<JSESSIONID>" localhost:8080/logout
+
+# Prod / base config — CSRF on, must echo the XSRF-TOKEN cookie as a header
 curl -s -X POST \
-  --cookie "SESSION=<SESSION>; XSRF-TOKEN=<XSRF>" \
+  --cookie "JSESSIONID=<JSESSIONID>; XSRF-TOKEN=<XSRF>" \
   --header "X-XSRF-TOKEN: <XSRF>" \
-  localhost:8080/logout
+  https://<host>/logout
 ```
-
-### Why CSRF protection requires the `X-XSRF-TOKEN` header
-
-The app uses cookie-based sessions, which means the browser auto-sends the `SESSION` cookie on every request — including any cross-site requests an attacker tricks you into making. CSRF protection blocks that: mutating requests (POST/PATCH/DELETE/PUT) must echo the `XSRF-TOKEN` cookie value as an `X-XSRF-TOKEN` header, which a malicious cross-site form can't fabricate. Phase 11's React frontend will do this automatically; for manual testing, you copy the cookie value into the header yourself.
 
 ## Deployment
 

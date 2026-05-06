@@ -44,6 +44,11 @@ out/
 *.pem
 *.key
 
+# JetBrains HTTP Client — private env file holds live session cookies; the
+# .cookies file caches per-host cookies for cookie-jar mode.
+**/http-client.private.env.json
+**/http-client.cookies
+
 # ==========================================================================
 # Logs & runtime
 # ==========================================================================
