@@ -113,6 +113,35 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
+
+			<!--
+			  JaCoCo — code-coverage instrumentation + report.
+			  After `./mvnw verify`, the HTML report is at
+			  target/site/jacoco/index.html and the XML (for CI tools) at
+			  target/site/jacoco/jacoco.xml. No build-failing threshold is
+			  enforced — coverage is a smoke signal, not a gate. We can wire
+			  a CI-side threshold check in Phase 15.
+			-->
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>0.8.12</version>
+				<executions>
+					<execution>
+						<id>prepare-agent</id>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>report</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>report</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
 

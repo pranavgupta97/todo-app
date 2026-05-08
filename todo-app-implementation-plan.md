@@ -357,10 +357,14 @@ Two sub-units, two commits, one PR — same pattern as Phase 4.
 - README updated with login flow + how to provision a Google OAuth client locally
 **Exit criteria:** Logging in via Google in a browser → redirect → consent → back to app with cookie set; `GET /api/todos` returns only that user's todos; second user logging in sees empty list; sign-out works.
 
-### Phase 7 — Backend test suite ⏳
+### Phase 7 — Backend test suite 🔄 In progress (branch `phase-7/backend-tests`)
 **Goal:** Comprehensive backend tests at every level, including security.
-**Deliverables:** Service-layer unit tests (JUnit 5 + Mockito); controller tests (`@WebMvcTest` with `SecurityMockMvcConfigurers`); full-stack integration tests (`@SpringBootTest` + Testcontainers + `@WithMockUser`/`oidcLogin()`); JaCoCo coverage report wired into the Maven build.
-**Exit criteria:** `./mvnw verify` green; coverage report generated; per-user authorization explicitly tested (user A cannot read user B's todo).
+**Deliverables (organised by commit):**
+- *Commit 1 — JaCoCo + service unit tests*: JaCoCo plugin in `pom.xml` (report-only, no build-failing threshold); `CustomOidcUserService.upsertAndWrap` extracted as a package-private testability seam; `TodoServiceTest` (Mockito), `CustomOidcUserServiceTest` (Mockito); shared test helpers (`TestPrincipals`, `TestTodos`, `TestUsers`).
+- *Commit 2 — Web-slice tests*: `TodoControllerTest`, `MeControllerTest` using `@WebMvcTest` + `@Import(SecurityConfig.class)` + Spring Security test (`oidcLogin()`, `with(csrf())`). Asserts CSRF enforcement, validation errors → ProblemDetail, 404 → ProblemDetail, security boundary on unauthenticated calls.
+- *Commit 3 — Persistence-slice tests*: `TodoRepositoryTest`, `UserRepositoryTest` using `@DataJpaTest` + Testcontainers + `@AutoConfigureTestDatabase(replace = NONE)`. Confirms JPA mappings, custom-query semantics, and that V1 Flyway seed (system user) lands.
+- *Commit 4 — Integration test + plan-doc updates*: `TodoApiIntegrationTest` using `@SpringBootTest` + `@AutoConfigureMockMvc` + Testcontainers + Spring Security test. Two named test methods: `crud_happyPath_endToEnd` and **`perUserIsolation_userBCannotSeeOrModifyUserAsTodos`** (the marquee — proves cross-user 404 posture).
+**Exit criteria:** `./mvnw verify` green; JaCoCo HTML report at `target/site/jacoco/index.html`; per-user authorization explicitly tested at unit, slice, and integration levels.
 
 ### Phase 8 — API contract (OpenAPI) ⏳
 **Goal:** Auto-generated OpenAPI spec; serves as shared contract for the frontend.
@@ -570,6 +574,14 @@ These are the working agreements between the author and Claude. Captured here so
 - **Phase 1 (Dev env setup):** installed SDKMAN 5.22, JDK 21.0.5-tem, Maven 3.9.15, gh 2.90 (authenticated), pnpm 10.33. Verified. ✅
 - **Phase 2 (Repo bootstrap):** scaffold files created locally (`.gitignore`, `.editorconfig`, `LICENSE`, `README.md`, this plan doc, `docs/.gitkeep`). Repo created and initial commit pushed to `main` at https://github.com/pranavgupta97/todo-app. ✅
 - **Phase 3 (Backend skeleton):** initial Initializr attempt on Spring Boot 4.0.5 hit friction (Docker daemon + novel test-starter pattern); rolled back to 3.5.x for a much larger docs/community footprint. Build green, health endpoint UP. Merged via PR #1. ✅
+
+### 2026-05-05 — Session 6: Phase 7 (backend test suite)
+- **Test pyramid established at four layers**: pure unit (Mockito) → web slice (`@WebMvcTest`) → persistence slice (`@DataJpaTest`) → full integration (`@SpringBootTest`). Each layer kept on its own commit (4 commits, 1 PR) so the diff reviews layer-by-layer.
+- **Production-code refactor for testability**: `CustomOidcUserService` had its DB-touching upsert extracted into a package-private `upsertAndWrap(OidcUser)` method. The public `loadUser(...)` is now a one-liner that composes `super.loadUser` + `upsertAndWrap`. This avoids needing PowerMock-style super-call stubbing in unit tests; instead we test the package-private seam directly with a hand-built `OidcUser`. Production behaviour identical.
+- **Spring Security testing patterns introduced**: `oidcLogin().oidcUser(appOidcUser(userId))` to inject our real `AppOidcUser` (not the generic `DefaultOidcUser` you'd get from `@WithMockUser`); `with(csrf())` to satisfy CSRF on mutating requests; `@MockitoBean` (Spring Boot 3.4+ replacement for the deprecated `@MockBean`); `@Import(SecurityConfig.class)` to use the real filter chain in slice tests; `@AutoConfigureTestDatabase(replace = NONE)` + `@Import(TestcontainersConfiguration.class)` to keep `@DataJpaTest` slices on Postgres rather than H2.
+- **Per-user data isolation, the marquee assertion**: `TodoApiIntegrationTest.perUserIsolation_userBCannotSeeOrModifyUserAsTodos()` is the single test that proves the contract end-to-end. User A creates a todo; user B logs in (different `oidcLogin()` principal), sees an empty list, gets 404 (not 403, by design, to avoid leaking existence) on `GET/PATCH/DELETE` of A's todo; A's row remains unmodified in the DB. Cross-user 404-not-403 is also asserted at the unit level (`TodoServiceTest`).
+- **Test-only helpers** in `backend/src/test/java/com/pranavgupta/todoapp/test/`: `TestPrincipals.appOidcUser(...)`, `TestTodos.todo(...)`, `TestUsers.user(...)`. The latter two use reflection to populate `@GeneratedValue` ids and `@PrePersist` timestamps — necessary because the production entities expose only getters for those fields (correct for production, friction in tests).
+- **JaCoCo wired into the Maven build, no failing threshold**. Generates HTML at `target/site/jacoco/index.html` and XML at `target/site/jacoco/jacoco.xml` after every `verify`. Phase 15 will add a CI-side threshold check; gating in Maven would just produce gameable tests.
 
 ### 2026-05-05 — Session 5: Dev API testing workflow refinement (chore PR before Phase 7)
 - **Problem identified by author after Phase 6 merge.** Manual API testing via `todos.http` was painful: my docs had named the session cookie `SESSION` (Spring Session naming) when our setup actually emits `JSESSIONID` (Tomcat default). Even after fixing the cookie name, mutating requests required also juggling the `XSRF-TOKEN` cookie + `X-XSRF-TOKEN` header for CSRF — the user's manual tweak adding `Cookie: JSESSIONID=...` to a POST request still got a 403 because of the missing CSRF header.

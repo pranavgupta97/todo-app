@@ -19,6 +19,18 @@ spring:
   flyway:
     enabled: true
 
+  # Make Spring's built-in exception handlers (validation, binding,
+  # type-mismatch) return RFC 7807 ProblemDetail with the
+  # `application/problem+json` media type. Default in Spring Boot 3 is `false`,
+  # which leaves built-in errors with no body and no Content-Type — caught by
+  # Phase 7's controller tests. Our @ControllerAdvice already returns
+  # ProblemDetail explicitly for app-specific exceptions; this turns on the
+  # automatic behaviour for the framework-level ones too, so the API contract
+  # is consistent: every error response is `application/problem+json`.
+  mvc:
+    problemdetails:
+      enabled: true
+
   # Docker Compose integration is off by default. The 'dev' profile turns it on so
   # local `./mvnw spring-boot:run` auto-starts the Postgres defined in compose.yaml.
   docker:

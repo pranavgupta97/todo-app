@@ -35,8 +35,19 @@ public class CustomOidcUserService extends OidcUserService {
     @Override
     @Transactional
     public OidcUser loadUser(OidcUserRequest userRequest) throws OAuth2AuthenticationException {
-        OidcUser oidcUser = super.loadUser(userRequest);
+        return upsertAndWrap(super.loadUser(userRequest));
+    }
 
+    /**
+     * Given an {@link OidcUser} returned by the identity provider, upsert the
+     * matching local {@link User} row and wrap the result in an
+     * {@link AppOidcUser} carrying our internal user id.
+     *
+     * <p>Package-private so unit tests can exercise the upsert logic directly,
+     * without having to stub the parent's HTTP-bound {@code super.loadUser}
+     * call. Production callers always go through {@link #loadUser}.</p>
+     */
+    AppOidcUser upsertAndWrap(OidcUser oidcUser) {
         String externalId = oidcUser.getSubject();   // OIDC "sub" claim
         String email      = oidcUser.getEmail();
         String name       = oidcUser.getFullName();
